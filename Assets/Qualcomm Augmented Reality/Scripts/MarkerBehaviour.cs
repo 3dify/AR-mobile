@@ -6,11 +6,14 @@ Confidential and Proprietary - Qualcomm Connected Experiences, Inc.
 
 using UnityEngine;
 
-/// <summary>
-/// This class serves both as an augmentation definition for a Marker in the editor
-/// as well as a tracked marker result at runtime
-/// </summary>
-public class MarkerBehaviour : MarkerAbstractBehaviour
+namespace Vuforia
 {
+    /// <summary>
+    /// This class serves both as an augmentation definition for a Marker in the editor
+    /// as well as a tracked marker result at runtime
+    /// </summary>
+    public class MarkerBehaviour : MarkerAbstractBehaviour
+    {
 
+    }
 }

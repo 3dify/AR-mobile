@@ -10,15 +10,29 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-/// <summary>
-/// The QCARBehaviour class handles tracking and triggers native video
-/// background rendering. The class updates all Trackables in the scene.
-/// </summary>
-[RequireComponent(typeof(Camera))]
-public class QCARBehaviour : QCARAbstractBehaviour
+namespace Vuforia
 {
-    QCARBehaviour()
+    /// <summary>
+    /// The QCARBehaviour class handles tracking and triggers native video
+    /// background rendering. The class updates all Trackables in the scene.
+    /// </summary>
+    public class QCARBehaviour : QCARAbstractBehaviour
     {
-        mAndroidUnityPlayer = new AndroidUnityPlayer();
+        protected void Awake()
+        {
+            IUnityPlayer unityPlayer = new NullUnityPlayer();
+
+            // instantiate the correct UnityPlayer for the current platform
+            if (Application.platform == RuntimePlatform.Android)
+                unityPlayer = new AndroidUnityPlayer();
+            else if (Application.platform == RuntimePlatform.IPhonePlayer)
+                unityPlayer = new IOSUnityPlayer();
+            else if (QCARRuntimeUtilities.IsPlayMode())
+                unityPlayer = new PlayModeUnityPlayer();
+
+            SetUnityPlayerImplementation(unityPlayer);
+
+            gameObject.AddComponent<ComponentFactoryStarterBehaviour>();
+        }
     }
 }

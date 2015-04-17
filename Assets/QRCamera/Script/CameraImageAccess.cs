@@ -2,31 +2,28 @@ using UnityEngine;
 using System.Collections;
 
 using com.google.zxing.qrcode;
+using Vuforia;
 
-public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
+public class CameraImageAccess : MonoBehaviour {
+	
+	public StringEvent QRFoundEvent;
 	
 	private bool isFrameFormatSet;
 	
 	private Image cameraFeed;
 	private string tempText;
-	private string qrText;
+	private string qrText;	
 	
 	void Start () {
 		QCARBehaviour qcarBehaviour = GetComponent<QCARBehaviour>();
 		
 		if (qcarBehaviour) {
-			qcarBehaviour.RegisterTrackerEventHandler(this);
+			qcarBehaviour.RegisterTrackablesUpdatedCallback(OnTrackablesUpdated);
 		}
 		
-		isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Image.PIXEL_FORMAT.GRAYSCALE, true);
 		
-		InvokeRepeating("Autofocus", 1f, 2f);
 	}
 	
-	void Autofocus () {
-		CameraDevice.Instance.SetFocusMode(CameraDevice.FocusMode.FOCUS_MODE_TRIGGERAUTO);
-	}
-
 	void Update () {
 		if (Input.GetKeyDown(KeyCode.Escape)) {
 			Application.Quit();
@@ -35,10 +32,6 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 	
 	void OnGUI () {
 		GUI.Box(new Rect(0, Screen.height - 25, Screen.width, 25), qrText);
-	}
-	
-	public void OnInitialized(){
-	
 	}
 	
 	public void OnTrackablesUpdated () {
@@ -56,6 +49,7 @@ public class CameraImageAccess : MonoBehaviour, ITrackerEventHandler {
 		finally {
 			if(!string.IsNullOrEmpty(tempText)) {
 				qrText = tempText;
+				QRFoundEvent.Invoke(qrText);
 			}
 		}
 	}

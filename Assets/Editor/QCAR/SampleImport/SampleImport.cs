@@ -7,6 +7,7 @@ Confidential and Proprietary - Qualcomm Connected Experiences, Inc.
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using Vuforia;
 
 
 public class SampleImport : AssetPostprocessor
@@ -20,6 +21,6 @@ public class SampleImport : AssetPostprocessor
     {
         // Set the Unity version for internal use
         string path = Path.Combine(Application.dataPath, "StreamingAssets/QCAR");
-        QCARUnity.SetUnityVersion(path);
+        //QCARUnity.SetUnityVersion(path);
     }
 }
