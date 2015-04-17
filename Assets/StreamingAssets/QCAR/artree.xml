@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<QCARConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="qcar_config.xsd">
+  <Tracking>
+    <ImageTarget name="port" size="10.000000 6.975000" />
+    <ImageTarget name="choc" size="200.000000 150.000000" />
+    <ImageTarget name="bizcard" size="500.000000 200.000000" />
+    <ImageTarget name="art_trigger" size="150.000000 150.000000" />
+  </Tracking>
+</QCARConfig>
