@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 public class ObjImporter {
 	
@@ -26,8 +27,9 @@ public class ObjImporter {
 		public string fileName;
 	}
 	
-	public static Mesh ImportFile (Stream fileStream) {
+	public static Mesh ImportFile (Stream fileStream ) {
 		meshStruct newMesh = createMeshStruct(new StreamReader(fileStream,System.Text.Encoding.UTF8,true));
+		fileStream.Position = 0;
 		populateMeshStruct(ref newMesh, new StreamReader(fileStream,System.Text.Encoding.UTF8,true));
 		
 		Vector3[] newVerts = new Vector3[newMesh.faceData.Length];
@@ -37,7 +39,7 @@ public class ObjImporter {
 		/* The following foreach loops through the facedata and assigns the appropriate vertex, uv, or normal
          * for the appropriate Unity mesh array.
          */
-		foreach (Vector3 v in newMesh.faceData)            
+		foreach(Vector3 v in newMesh.faceData)
 		{
 			newVerts[i] = newMesh.vertices[(int)v.x - 1];
 			if (v.y >= 1)

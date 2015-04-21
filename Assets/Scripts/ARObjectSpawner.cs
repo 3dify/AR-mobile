@@ -26,10 +26,14 @@ public class ARObjectSpawner : MonoBehaviour, ICloudRecoEventHandler {
 	public void OnNewSearchResult(TargetFinder.TargetSearchResult targetSearchResult){
 		Debug.Log("Target found "+targetSearchResult.TargetName);
 		ObjectTracker tracker = TrackerManager.Instance.GetTracker<ObjectTracker>();
-		ImageTargetBehaviour imageTargetBehaviour = 
-			(ImageTargetBehaviour)tracker.TargetFinder.EnableTracking(
-				targetSearchResult,GameObject.FindObjectOfType<ImageTargetBehaviour>().gameObject);
-	}
+		
+		GameObject model = GameObject.Find( targetSearchResult.TargetName );
+		
+		if( model != null ){
+			ImageTargetBehaviour imageTargetBehaviour = 
+				(ImageTargetBehaviour)tracker.TargetFinder.EnableTracking(targetSearchResult,model);       
+        }
+    }
 	
 	public void OnStateChanged(bool scanning){
 		Debug.Log(scanning);

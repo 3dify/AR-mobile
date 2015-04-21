@@ -49,7 +49,8 @@ public class CameraImageAccess : MonoBehaviour {
 		finally {
 			if(!string.IsNullOrEmpty(tempText)) {
 				qrText = tempText;
-				QRFoundEvent.Invoke(qrText);
+				QRFoundEvent.Invoke(tempText);
+				tempText = "";
 			}
 		}
 	}
