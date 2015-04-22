@@ -5,8 +5,15 @@ using UnityEngine.UI;
 public class LoadingProgress : MonoBehaviour {
 
 	public RectTransform progressSlider;
-
+	public Text textLabel;
 	public float progress;
+	
+	
+	public string Label {
+		set {
+			textLabel.text = value;
+		}
+	}
 
 	void Start () {
 		

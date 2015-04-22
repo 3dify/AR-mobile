@@ -55,11 +55,10 @@ public class CameraImageAccess : MonoBehaviour {
                 
 			}
 			
-			Debug.Log ("Before Decode "+Time.time);
+			//Debug.Log ("Before Decode "+Time.time);
 			Result result = null;
 			
 			result = reader.Decode( cameraFeed.Pixels, cameraFeed.BufferWidth, cameraFeed.BufferHeight,RGBLuminanceSource.BitmapFormat.Gray8);
-			Debug.Log ("After Decode");
 			if( result != null ){
 				
 				tempText = result.Text;

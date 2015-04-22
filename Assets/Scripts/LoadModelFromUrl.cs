@@ -10,7 +10,7 @@ using Vuforia;
 public class LoadModelFromUrl : MonoBehaviour {
 
 	public GameObject modelTemplate;
-	public GameObject loadingUITemplate;
+	public LoadingProgress loadingUI;
 	//private List<string> loading = new List<string>();
 	private HashSet<string> loading = new HashSet<string>();
 
@@ -38,17 +38,17 @@ public class LoadModelFromUrl : MonoBehaviour {
 		//tracker.enabled = false;
 		Debug.Log ("Loading "+url);
 		
-		LoadingProgress progressUI = loadingUITemplate.GetComponent<LoadingProgress>();
-		//(Instantiate( loadingUITemplate ) as GameObject ).GetComponent<LoadingProgress>();
-		progressUI.gameObject.SetActive( true );
 		
+		loadingUI.gameObject.SetActive( true );
+		loadingUI.Label = "Downloading";
+		loadingUI.progress = 0;
 		// Wait for download to complete
 		while( !www.isDone ){
-			progressUI.progress = www.progress;
+			loadingUI.progress = www.progress;
 			yield return null;
 		}
 		
-		progressUI.gameObject.SetActive( false );
+		loadingUI.gameObject.SetActive( false );
 		
 		// Load and retrieve the AssetBundle
 		//AssetBundle bundle = www.assetBundle;
@@ -71,8 +71,8 @@ public class LoadModelFromUrl : MonoBehaviour {
             	
 				string fileName = zipEntry.Name;
 				string ext = Path.GetExtension(fileName);
-				Debug.Log (string.Format("{0} is {1}",fileName,ext.ToLower()));
 				if( fileName.Contains("__MACOSX") ) continue;
+				Debug.Log (string.Format("{0} is {1}",fileName,ext.ToLower()));
 				
 				if( ext.ToLower() == ".jpg" ){
 					int l=0;
@@ -111,10 +111,25 @@ public class LoadModelFromUrl : MonoBehaviour {
         tracker.enabled = true;
     }
     
-	private IEnumerator LoadBinaryModel(byte[] modelData,GameObject model){
-    	Mesh outputMesh = MeshSerializer.ReadMesh( modelData );	
-		model.transform.GetChild(0).GetComponent<MeshFilter>().mesh = outputMesh;
-		yield return null;
+	private IEnumerator LoadBinaryModel(byte[] modelData,GameObject modelContainer){
+		Transform model = modelContainer.transform.GetChild(0);
+		MeshSerializer serializer = new MeshSerializer();
+		serializer.ReadMeshASync(modelData);
+		loadingUI.gameObject.SetActive(true);
+		loadingUI.progress = 0;
+		loadingUI.Label = "Processing Model";
+		while(!serializer.IsDone){
+			yield return null;			
+		}
+		loadingUI.gameObject.SetActive(false);
+		MeshFilter filter = model.GetComponent<MeshFilter>();
+		filter.sharedMesh = serializer.CompletedModel;
+		filter.sharedMesh.RecalculateBounds();
+		Vector3 bottom = model.TransformDirection( Vector3.Scale(new Vector3(0,1,0), filter.mesh.bounds.extents) );
+		Vector3 center = model.TransformDirection( Vector3.Scale(new Vector3(1,1,1), filter.mesh.bounds.center) );
+		Debug.Log (bottom);
+		Debug.Log (center);
+		model.localPosition = Vector3.Scale (bottom,model.localScale);
     }
     
 	private static string CalculateMD5Hash(string input)

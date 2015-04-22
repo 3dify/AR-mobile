@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
 using UnityEngine;
+using System.Threading;
+using System.Collections;
+using System.Diagnostics;
 
 public class MeshSerializer
 {
@@ -29,8 +32,84 @@ public class MeshSerializer
 	//
 	//    Finally the triangle indices array: 6 bytes per triangle (3 unsigned short indices)
 	// Reads mesh from an array of bytes. [old: Can return null if the bytes seem invalid.]
-	public static Mesh ReadMesh(byte[] bytes)
+	
+	
+	public Thread processThread;
+	public byte[] modelData;
+	private bool isDone;
+	private int totalSteps = 0;
+	private int totalStepsCompleted = 0;
+	private MeshData meshData;
+	public void ReadMeshASync(byte[] bytes)
 	{
+		this.modelData = bytes;
+		isDone = false;
+		meshData = new MeshData();
+		processThread = new Thread(_ReadMeshThread);
+		processThread.Start();
+	}
+	
+	private void _ReadMeshThread(){
+		
+		ReadMesh( modelData, true, ref this.totalSteps, ref this.totalStepsCompleted, meshData );
+		isDone = true;
+	}
+	
+	public bool IsDone {
+		get {
+			return isDone;
+		}
+	}
+	
+	public float Progress {
+		get {
+			return 1f*this.totalStepsCompleted/this.totalSteps;
+		}	
+	}
+	
+	public Mesh CompletedModel {
+		get {
+			Mesh mesh = new Mesh();
+			mesh.vertices = meshData.vertices;
+			mesh.normals = meshData.normals;
+			mesh.tangents = meshData.tangents;
+			mesh.uv = meshData.uv;
+			mesh.triangles = meshData.triangles;
+			return mesh;
+		}
+	}
+	
+	public static Mesh ReadMesh(byte[] bytes){
+		var meshData = new MeshData();
+		var mesh = new Mesh();
+		int a = 0;
+		int b = 0;
+		ReadMesh(bytes,false,ref a,ref b, meshData);
+		mesh.vertices = meshData.vertices;
+		mesh.normals = meshData.normals;
+		mesh.tangents = meshData.tangents;
+		mesh.uv = meshData.uv;
+		mesh.triangles = meshData.triangles;
+		return mesh;
+	}
+	
+	private class MeshData {
+		public Vector3[] vertices;
+		public Vector3[] normals;
+		public Vector4[] tangents;
+		public Vector2[] uv;
+		public int[] triangles;
+		
+	}
+		
+	private static void ReadMesh(byte[] bytes, bool aSync, ref int totalSteps, ref int totalStepsCompleted, MeshData mesh)
+	{
+		IEnumerator steps;
+		Stopwatch stopwatch = new Stopwatch();
+		stopwatch.Start();
+		int sleep = 30;
+		int timeout = 5;
+		
 		if (bytes == null || bytes.Length < 5)
 			throw new Exception("Invalid mesh file!");
 		
@@ -41,6 +120,9 @@ public class MeshSerializer
 		var triCount = buf.ReadUInt16();
 		var format = buf.ReadByte();
 		
+		totalStepsCompleted = 0;
+		totalSteps = (int)vertCount + (((format & 2) != 0)?(int)vertCount:0) + (((format & 4) != 0)?(int)vertCount:0) + (((format & 8) != 0)?(int)vertCount:0) + (int)triCount;
+		
 		// sanity check
 		if (vertCount < 0 || vertCount > 64000)
 			throw new Exception("Invalid vertex count in the mesh data!");
@@ -49,55 +131,88 @@ public class MeshSerializer
 		if (format < 1 || (format & 1) == 0 || format > 15)
 			throw new Exception("Invalid vertex format in the mesh data!");
 		
-		var mesh = new Mesh();
-		int i;
 		
 		// positions
 		var verts = new Vector3[vertCount];
-		ReadVector3Array16Bit(verts, buf);
+		steps = ReadVector3Array16Bit(verts, buf);
+		while(steps.MoveNext()){
+			if(aSync && stopwatch.ElapsedMilliseconds>timeout){
+				Thread.Sleep(sleep);
+				stopwatch.Reset();
+			}
+			
+			totalStepsCompleted++;
+		}
 		mesh.vertices = verts;
 		
 		if ((format & 2) != 0) // have normals
 		{
 			var normals = new Vector3[vertCount];
-			ReadVector3ArrayBytes(normals, buf);
+			
+			steps = ReadVector3ArrayBytes(normals, buf);
+			while(steps.MoveNext()){
+				if(aSync && stopwatch.ElapsedMilliseconds>timeout){
+					Thread.Sleep(sleep);
+					stopwatch.Reset();
+				}
+				totalStepsCompleted++;
+				
+			} 
 			mesh.normals = normals;
 		}
 		
 		if ((format & 4) != 0) // have tangents
 		{
 			var tangents = new Vector4[vertCount];
-			ReadVector4ArrayBytes(tangents, buf);
+			steps = ReadVector4ArrayBytes(tangents, buf);
+			while(steps.MoveNext()){
+				if(aSync && stopwatch.ElapsedMilliseconds>timeout){
+					Thread.Sleep(sleep);
+					stopwatch.Reset();
+				}
+				totalStepsCompleted++;
+				
+			}
 			mesh.tangents = tangents;
 		}
 		
 		if ((format & 8) != 0) // have UVs
 		{
 			var uvs = new Vector2[vertCount];
-			ReadVector2Array16Bit(uvs, buf);
+			steps = ReadVector2Array16Bit(uvs, buf);
+			while(steps.MoveNext()){
+				if(aSync && stopwatch.ElapsedMilliseconds>timeout){
+					Thread.Sleep(sleep);
+					stopwatch.Reset();
+				}
+				totalStepsCompleted++;
+				
+			}
 			mesh.uv = uvs;
 		}
 		
 		// triangle indices
 		var tris = new int[triCount * 3];
-		for (i = 0; i < triCount; ++i)
-		{
-			tris[i * 3 + 0] = buf.ReadUInt16();
-			tris[i * 3 + 1] = buf.ReadUInt16();
-			tris[i * 3 + 2] = buf.ReadUInt16();
+		steps = ReadTris(tris,triCount,buf);
+		while(steps.MoveNext()){
+			if(aSync && stopwatch.ElapsedMilliseconds>timeout){
+				Thread.Sleep(sleep);
+				stopwatch.Reset();
+			}
+			totalStepsCompleted++;
+			
 		}
 		mesh.triangles = tris;
 		
 		buf.Close();
 		
-		return mesh;
 	}
 	
-	static void ReadVector3Array16Bit(Vector3[] arr, BinaryReader buf)
+	static IEnumerator ReadVector3Array16Bit(Vector3[] arr, BinaryReader buf)
 	{
 		var n = arr.Length;
 		if (n == 0)
-			return;
+			yield break;
 		
 		// read bounding box
 		Vector3 bmin;
@@ -110,6 +225,7 @@ public class MeshSerializer
 		bmax.z = buf.ReadSingle();
 		
 		// decode vectors as 16 bit integer components between the bounds
+				
 		for (var i = 0; i < n; ++i)
 		{
 			ushort ix = buf.ReadUInt16();
@@ -119,8 +235,24 @@ public class MeshSerializer
 			float yy = iy / 65535.0f * (bmax.y - bmin.y) + bmin.y;
 			float zz = iz / 65535.0f * (bmax.z - bmin.z) + bmin.z;
 			arr[i] = new Vector3(xx, yy, zz);
+			
+			yield return null;
 		}
 	}
+	
+	static IEnumerator ReadTris(int[] tris, int triCount, BinaryReader buf){
+		if( triCount == 0 )
+			yield break;
+	
+		for (int i = 0; i < triCount; ++i)
+		{
+			tris[i * 3 + 0] = buf.ReadUInt16();
+			tris[i * 3 + 1] = buf.ReadUInt16();
+			tris[i * 3 + 2] = buf.ReadUInt16();
+			yield return null;
+		}
+	}
+	
 	static void WriteVector3Array16Bit(Vector3[] arr, BinaryWriter buf)
 	{
 		if (arr.Length == 0)
@@ -155,11 +287,11 @@ public class MeshSerializer
 			buf.Write(iz);
 		}
 	}
-	static void ReadVector2Array16Bit(Vector2[] arr, BinaryReader buf)
+	static IEnumerator ReadVector2Array16Bit(Vector2[] arr, BinaryReader buf)
 	{
 		var n = arr.Length;
 		if (n == 0)
-			return;
+			yield break;
 		
 		// Read bounding box
 		Vector2 bmin;
@@ -177,6 +309,7 @@ public class MeshSerializer
 			float xx = ix / 65535.0f * (bmax.x - bmin.x) + bmin.x;
 			float yy = iy / 65535.0f * (bmax.y - bmin.y) + bmin.y;
 			arr[i] = new Vector2(xx, yy);
+			yield return null;
 		}
 	}
 	static void WriteVector2Array16Bit(Vector2[] arr, BinaryWriter buf)
@@ -210,10 +343,11 @@ public class MeshSerializer
 			var iy = (ushort)yy;
 			buf.Write(ix);
 			buf.Write(iy);
+			
 		}
 	}
 	
-	static void ReadVector3ArrayBytes(Vector3[] arr, BinaryReader buf)
+	static IEnumerator ReadVector3ArrayBytes(Vector3[] arr, BinaryReader buf)
 	{
 		// decode vectors as 8 bit integers components in -1.0f .. 1.0f range
 		var n = arr.Length;
@@ -226,6 +360,7 @@ public class MeshSerializer
 			float yy = (iy - 128.0f) / 127.0f;
 			float zz = (iz - 128.0f) / 127.0f;
 			arr[i] = new Vector3(xx, yy, zz);
+			yield return null;
 		}
 	}
 	static void WriteVector3ArrayBytes(Vector3[] arr, BinaryWriter buf)
@@ -242,7 +377,7 @@ public class MeshSerializer
 		}
 	}
 	
-	static void ReadVector4ArrayBytes(Vector4[] arr, BinaryReader buf)
+	static IEnumerator ReadVector4ArrayBytes(Vector4[] arr, BinaryReader buf)
 	{
 		// Decode vectors as 8 bit integers components in -1.0f .. 1.0f range
 		var n = arr.Length;
@@ -257,6 +392,7 @@ public class MeshSerializer
 			float zz = (iz - 128.0f) / 127.0f;
 			float ww = (iw - 128.0f) / 127.0f;
 			arr[i] = new Vector4(xx, yy, zz, ww);
+			yield return null;
 		}
 	}
 	static void WriteVector4ArrayBytes(Vector4[] arr, BinaryWriter buf)
