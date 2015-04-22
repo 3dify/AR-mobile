@@ -1,8 +1,9 @@
 using UnityEngine;
 using System.Collections;
-
-using com.google.zxing.qrcode;
 using Vuforia;
+using ZXing;
+using ZXing.QrCode;
+
 
 public class CameraImageAccess : MonoBehaviour {
 	
@@ -10,10 +11,12 @@ public class CameraImageAccess : MonoBehaviour {
 	
 	private bool isFrameFormatSet;
 	
+	private float lastTime;
+	
 	private Image cameraFeed;
 	private string tempText;
 	private string qrText;	
-	
+	private BarcodeReader reader = new BarcodeReader();
 	void Start () {
 		QCARBehaviour qcarBehaviour = GetComponent<QCARBehaviour>();
 		
@@ -25,29 +28,50 @@ public class CameraImageAccess : MonoBehaviour {
 	}
 	
 	void Update () {
-		if (Input.GetKeyDown(KeyCode.Escape)) {
-			Application.Quit();
-		}
 	}
 	
 	public void OnTrackablesUpdated () {
-		try {
-			if(!isFrameFormatSet) {
-				isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Image.PIXEL_FORMAT.GRAYSCALE, true);
+		
+		float elapsed = Time.time - lastTime;
+		
+		if(!isFrameFormatSet) {
+			isFrameFormatSet = CameraDevice.Instance.SetFrameFormat(Image.PIXEL_FORMAT.GRAYSCALE, true);
+        }
+        		
+		if( elapsed < 0.5 ) return;
+		
+		lastTime = Time.time;
+		
+		if( isFrameFormatSet ) {
+			cameraFeed = CameraDevice.Instance.GetCameraImage(Image.PIXEL_FORMAT.GRAYSCALE);
+			
+			if( cameraFeed == null ){
+				Debug.Log ("Camera Feed was null");
+				return;
+			}
+			if( cameraFeed.Pixels == null ){
+				Debug.Log ("Camera Pixels was null");
+				return;
+                
 			}
 			
-			cameraFeed = CameraDevice.Instance.GetCameraImage(Image.PIXEL_FORMAT.GRAYSCALE);
-			//tempText = new QRCodeReader().decode(cameraFeed.Pixels, cameraFeed.BufferWidth, cameraFeed.BufferHeight).Text;
-		}
-		catch {
-			// Fail detecting QR Code!
-		}
-		finally {
-			if(!string.IsNullOrEmpty(tempText)) {
-				qrText = tempText;
-				QRFoundEvent.Invoke(tempText);
-				tempText = "";
+			Debug.Log ("Before Decode "+Time.time);
+			Result result = null;
+			
+			result = reader.Decode( cameraFeed.Pixels, cameraFeed.BufferWidth, cameraFeed.BufferHeight,RGBLuminanceSource.BitmapFormat.Gray8);
+			Debug.Log ("After Decode");
+			if( result != null ){
+				
+				tempText = result.Text;
+				Debug.Log ("QR Decode returned "+tempText);
 			}
+            
+            if(!string.IsNullOrEmpty(tempText)) {
+                qrText = tempText;
+                QRFoundEvent.Invoke(tempText);
+                tempText = "";
+			}
+			
 		}
 	}
 }
