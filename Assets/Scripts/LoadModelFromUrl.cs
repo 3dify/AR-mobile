@@ -72,8 +72,25 @@ public class LoadModelFromUrl : MonoBehaviour {
 				string fileName = zipEntry.Name;
 				string ext = Path.GetExtension(fileName);
 				Debug.Log (string.Format("{0} is {1}",fileName,ext.ToLower()));
+				if( fileName.Contains("__MACOSX") ) continue;
 				
-				if( !fileName.Contains("__") && ext.ToLower() == ".bin" ){
+				if( ext.ToLower() == ".jpg" ){
+					int l=0;
+					byte[] imageBytes;
+					using ( MemoryStream objStream = new MemoryStream() ) {
+						while((l=zipStream.Read(fileBytes,0,fileBytes.Length))>0){
+							objStream.Write(fileBytes,0,l);		
+							
+						}
+						objStream.Position = 0;
+						imageBytes = objStream.ToArray();
+					}
+					Texture2D texture = new Texture2D(2,2);
+					texture.LoadImage( imageBytes );
+					model.transform.GetChild(0).renderer.sharedMaterial.mainTexture = texture;
+				}
+				
+				if( ext.ToLower() == ".bin" ){
 					int l=0;
 					byte[] modelBytes;
 					using ( MemoryStream objStream = new MemoryStream() ) {
@@ -89,28 +106,9 @@ public class LoadModelFromUrl : MonoBehaviour {
 			}
         }
         
-        /*
-        Debug.Log (string.Format("obj is {0} bytes",objStream.Length));
+        timer.Stop();
         
-		objStream.Position = 0;
-        
-		if( objStream.Length > 0 ){
-		
-			var importThread = new System.Threading.Thread(()=>{
-		
-				Mesh import = ObjImporter.ImportFile( objStream );
-				
-				GameObject model = Instantiate( modelTemplate ) as GameObject;
-				model.name = urlHash.ToLower();
-				model.transform.GetChild(0).GetComponent<MeshFilter>().mesh = import;        
-			
-			});
-			
-			
-		}
-		*/
-		
-		tracker.enabled = true;
+        tracker.enabled = true;
     }
     
 	private IEnumerator LoadBinaryModel(byte[] modelData,GameObject model){

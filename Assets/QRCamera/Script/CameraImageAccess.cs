@@ -30,10 +30,6 @@ public class CameraImageAccess : MonoBehaviour {
 		}
 	}
 	
-	void OnGUI () {
-		GUI.Box(new Rect(0, Screen.height - 25, Screen.width, 25), qrText);
-	}
-	
 	public void OnTrackablesUpdated () {
 		try {
 			if(!isFrameFormatSet) {
@@ -41,7 +37,7 @@ public class CameraImageAccess : MonoBehaviour {
 			}
 			
 			cameraFeed = CameraDevice.Instance.GetCameraImage(Image.PIXEL_FORMAT.GRAYSCALE);
-			tempText = new QRCodeReader().decode(cameraFeed.Pixels, cameraFeed.BufferWidth, cameraFeed.BufferHeight).Text;
+			//tempText = new QRCodeReader().decode(cameraFeed.Pixels, cameraFeed.BufferWidth, cameraFeed.BufferHeight).Text;
 		}
 		catch {
 			// Fail detecting QR Code!

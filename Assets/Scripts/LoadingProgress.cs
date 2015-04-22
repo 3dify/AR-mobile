@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 public class LoadingProgress : MonoBehaviour {
 
-	public Slider progressSlider;
+	public RectTransform progressSlider;
 
 	public float progress;
 
@@ -31,10 +31,13 @@ public class LoadingProgress : MonoBehaviour {
         progressUIPos.position = new Vector2(0,0);
 		progressUIPos.pivot = new Vector2(0,0);
 		*/
+		progress = 0;
+		progressSlider.anchorMax = new Vector2(progress,1f);
+		
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		progressSlider.value = progress;
+		progressSlider.anchorMax = new Vector2(progress,1f);
 	}
 }
