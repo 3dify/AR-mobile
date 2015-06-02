@@ -50,8 +50,11 @@ public class MeshSerializer
 	}
 	
 	private void _ReadMeshThread(){
-		
-		ReadMesh( modelData, true, ref this.totalSteps, ref this.totalStepsCompleted, meshData );
+		try {
+			ReadMesh( modelData, true, ref this.totalSteps, ref this.totalStepsCompleted, meshData );
+		}catch(Exception e){
+			UnityEngine.Debug.LogError(e.ToString());
+		}
 		isDone = true;
 	}
 	
@@ -122,6 +125,8 @@ public class MeshSerializer
 		
 		totalStepsCompleted = 0;
 		totalSteps = (int)vertCount + (((format & 2) != 0)?(int)vertCount:0) + (((format & 4) != 0)?(int)vertCount:0) + (((format & 8) != 0)?(int)vertCount:0) + (int)triCount;
+		
+		UnityEngine.Debug.Log (string.Format("vertCount {0}",vertCount));
 		
 		// sanity check
 		if (vertCount < 0 || vertCount > 64000)
